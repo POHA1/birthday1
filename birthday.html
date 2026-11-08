@@ -1,0 +1,921 @@
+bgMusic<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>生日快乐 · 温馨祝福</title>
+<style>
+  /* ===== 全局重置 ===== */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(145deg, #2b1d3d 0%, #1a1025 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+  }
+
+  /* ===== 控制按钮 (右上角) ===== */
+  .controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 20;
+    display: flex;
+    gap: 10px;
+  }
+
+  .ctrl-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .ctrl-btn:active {
+    transform: scale(0.9);
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  /* ===== 星空背景层 ===== */
+  .stars {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(2px 2px at 20px 30px, #fff, rgba(0,0,0,0)),
+                radial-gradient(1.5px 1.5px at 40px 70px, #ffe9a7, rgba(0,0,0,0)),
+                radial-gradient(2.5px 2.5px at 60px 20px, #fff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 80px 90px, #b8e0ff, rgba(0,0,0,0)),
+                radial-gradient(1.5px 1.5px at 120px 50px, #ffe9a7, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 150px 120px, #fff, rgba(0,0,0,0));
+    background-size: 200px 200px;
+    background-repeat: repeat;
+    animation: twinkle 4s infinite alternate;
+    opacity: 0.6;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  @keyframes twinkle {
+    0% { opacity: 0.4; }
+    100% { opacity: 0.9; }
+  }
+
+  /* ===== 烟花 Canvas 层 ===== */
+  #fireworksCanvas {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 1s ease;
+  }
+  #fireworksCanvas.active {
+    opacity: 1;
+  }
+
+  /* ===== 动态小星星 & 雪花容器 ===== */
+  #fx-container {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+    transition: opacity 0.5s ease;
+  }
+
+  .snowflake {
+    position: absolute;
+    top: -20px;
+    color: #ffffff;
+    user-select: none;
+    pointer-events: none;
+    opacity: 0.8;
+    filter: blur(0.5px);
+    animation: fall linear infinite;
+  }
+
+  .snowflake.circle {
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+  }
+
+  .snowflake.char {
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+  }
+
+  @keyframes fall {
+    0% { transform: translateY(0) translateX(0) rotate(0deg); }
+    25% { transform: translateY(25vh) translateX(15px) rotate(90deg); }
+    50% { transform: translateY(50vh) translateX(-15px) rotate(180deg); }
+    75% { transform: translateY(75vh) translateX(15px) rotate(270deg); }
+    100% { transform: translateY(105vh) translateX(0) rotate(360deg); }
+  }
+
+  .star-particle {
+    position: absolute;
+    user-select: none;
+    pointer-events: none;
+    animation: floatStar linear infinite;
+    filter: drop-shadow(0 0 5px rgba(255, 233, 167, 0.8));
+  }
+
+  @keyframes floatStar {
+    0% { transform: translateY(0) scale(0.5) rotate(0deg); opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { transform: translateY(-100vh) scale(1.2) rotate(360deg); opacity: 0; }
+  }
+
+  .burst-star {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    filter: drop-shadow(0 0 8px rgba(255, 233, 167, 1));
+    animation: burst 1.5s cubic-bezier(0.2, 0.9, 0.4, 1) forwards;
+  }
+
+  @keyframes burst {
+    0% { transform: translate(0, 0) scale(0.5) rotate(0deg); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0.2) rotate(var(--tr)); opacity: 0; }
+  }
+
+  /* ===== 主卡片 ===== */
+  .birthday-card {
+    position: relative;
+    z-index: 10;
+    width: 90%;
+    max-width: 420px;
+    max-height: 85vh;
+    background: #ffffff;
+    border-radius: 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .screen-1 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 28px;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  .screen-1.hide {
+    display: none;
+  }
+
+  .title-small {
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: #999;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+
+  .title-main {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    color: #1a1a1a;
+    line-height: 1.3;
+    text-align: center;
+  }
+
+  .title-main span {
+    display: block;
+    font-size: 15px;
+    letter-spacing: 2px;
+    color: #666;
+    font-weight: 400;
+    margin-top: 8px;
+  }
+
+  .wish-card {
+    background: #fafbfc;
+    border-radius: 20px;
+    padding: 36px 24px;
+    text-align: center;
+    border: 1px solid #f0f0f0;
+    margin-top: 32px;
+    width: 100%;
+  }
+
+  .cake-line {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: bounce 2s infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .cake-line svg {
+    width: 56px;
+    height: 56px;
+    stroke: #1a1a1a;
+    stroke-width: 1.5;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .wish-intro {
+    font-size: 14px;
+    line-height: 1.9;
+    color: #777;
+    margin-bottom: 26px;
+    font-weight: 400;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 220px;
+    height: 46px;
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    border-radius: 24px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+    margin: 0 auto;
+  }
+
+  .btn-primary:active {
+    transform: scale(0.97);
+    background: #333;
+  }
+
+  .screen-2 {
+    display: none;
+    flex-direction: column;
+    padding: 40px 32px;
+    height: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    scroll-behavior: smooth; 
+  }
+
+  .screen-2.show {
+    display: flex;
+  }
+
+  .screen-2::-webkit-scrollbar {
+    width: 4px;
+  }
+  .screen-2::-webkit-scrollbar-thumb {
+    background: #e0e0e0;
+    border-radius: 2px;
+  }
+
+  .reveal-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: 3px;
+    margin-bottom: 28px;
+    text-align: center;
+  }
+
+  .reveal-content p {
+    font-size: 15px;
+    line-height: 2.1;
+    color: #444;
+    margin-bottom: 20px;
+    letter-spacing: 0.5px;
+    text-align: justify;
+  }
+
+  .reveal-content p strong {
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .reveal-content .signature {
+    text-align: right;
+    font-size: 13px;
+    color: #999;
+    letter-spacing: 1px;
+    margin-top: 8px;
+    margin-bottom: 0;
+  }
+
+  /* 诗歌特别排版 */
+  .poem {
+    text-align: center !important;
+    font-style: italic;
+    color: #666 !important;
+    line-height: 2.4 !important;
+    background: #f9f9f9;
+    padding: 20px 10px;
+    border-radius: 12px;
+    margin: 30px 0 !important;
+  }
+
+  .divider-thin {
+    width: 40px;
+    height: 2px;
+    background: #1a1a1a;
+    margin: 28px auto;
+    border-radius: 1px;
+  }
+
+  .btn-back {
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    color: #666;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    padding: 9px 32px;
+    cursor: pointer;
+    margin: 0 auto 10px;
+    transition: all 0.2s;
+  }
+
+  .btn-back:active {
+    border-color: #1a1a1a;
+    color: #1a1a1a;
+  }
+
+  @media (max-height: 700px) {
+    .title-main { font-size: 30px; }
+    .wish-card { padding: 28px 20px; margin-top: 24px; }
+    .reveal-title { margin-bottom: 20px; font-size: 20px; }
+    .reveal-content p { font-size: 14px; line-height: 2; margin-bottom: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stars"></div>
+<canvas id="fireworksCanvas"></canvas>
+
+<div class="controls">
+  <button class="ctrl-btn" id="snowToggle" title="下雪/停雪">❄️</button>
+  <button class="ctrl-btn" id="musicToggle" title="静音/播放">🔇</button>
+  <button class="ctrl-btn" id="scrollToggle" title="自动滚动开关" style="display: none;">⏸️</button>
+</div>
+
+<div id="fx-container"></div>
+
+<!-- 🎵 自定义音乐播放标签 (如果填入路径，将优先播放。留空则使用内置合成音乐) -->
+<audio id="bgMusic" loop>
+  <!-- 示例：<source src="my-birthday-song.mp3" type="audio/mpeg"> -->
+ 		     <source src="/birthday1/水田わさび,関智一,木村昴 - ハッピー☆ラッキー・バースデー!.mp3" type="audio/mpeg">
+
+</audio>
+
+<div class="birthday-card">
+  <div class="screen-1" id="screen1">
+    <div class="title-small">HAPPY BIRTHDAY</div>
+    <div class="title-main">
+      生日快乐
+      <span>致亲爱的你</span>
+    </div>
+
+    <div class="wish-card">
+      <div class="cake-line">
+        <svg viewBox="0 0 56 56">
+          <rect x="10" y="28" width="36" height="22" rx="4"/>
+          <path d="M6 28 L50 28"/>
+          <line x1="28" y1="8" x2="28" y2="20"/>
+          <ellipse cx="28" cy="6" rx="3" ry="4"/>
+          <line x1="18" y1="16" x2="18" y2="22"/>
+          <line x1="38" y1="16" x2="38" y2="22"/>
+          <circle cx="18" cy="14" r="1.5" fill="#1a1a1a"/>
+          <circle cx="38" cy="14" r="1.5" fill="#1a1a1a"/>
+        </svg>
+      </div>
+      <p class="wish-intro">
+        今天是属于你的日子。<br>
+        有一封很长很长的信，<br>
+        想用5分钟，慢慢说给你听。
+      </p>
+      <button class="btn-primary" id="receiveBtn">接收祝福</button>
+    </div>
+  </div>
+
+  <div class="screen-2" id="screen2">
+    <div class="title-small" style="text-align: center; margin-bottom: 10px;">TO YOU</div>
+    <div class="reveal-title">写给今天的你</div>
+
+    <div class="reveal-content">
+      <p>
+        亲爱的你：<br>
+        见字如面。<br>
+        在这个特别的日子里，想把全世界的温柔、星辰与微风，都统统打包送给你。
+      </p>
+
+      <p>
+        我们认识很久了吧。<br>
+        久到我都快忘了你刚来到这个世界时的样子。<br>
+        但我能想象得到，那时的你一定也是个被全家捧在手心里的小不点。
+      </p>
+
+      <p>
+        时间真是一个很神奇的东西。<br>
+        它无声无息地带走了很多，也悄悄沉淀下了很多。<br>
+        我仿佛看着你，从幼儿园那个因为一颗糖果就能开心一整天的稚童，<br>
+        长成了小学操场上追着风跑、不知疲倦的少年；<br>
+        又从初中课桌前第一次认真写下“我的梦想”的懵懂孩童，<br>
+        变成了高中无数个深夜里，为了那个叫做“未来”的东西咬牙苦读的倔强身影。
+      </p>
+
+      <p>
+        后来你上了大学，遇见了一群可以交心的朋友，<br>
+        在那个夏天，你笑得比任何时候都灿烂。<br>
+        再后来，你穿上了人生的第一件正装，踩着不太习惯的高跟鞋或皮鞋，走进了职场。<br>
+        你开始学着面对复杂的人际关系，开始学着一个人处理生活的琐碎，<br>
+        开始学着把眼泪咽回去，笑着说“没关系，我可以”。<br>
+        你从一个被照顾的孩子，长成了今天这个<strong>能够独当一面、认真生活、温柔又坚定</strong>的大人。
+      </p>
+
+      <p>
+        这一路走来，你一定也很辛苦吧。<br>
+        那些一个人走过的夜路，那些默默咽下的委屈，<br>
+        那些改了一遍又一遍的方案，那些无人知晓的疲惫，<br>
+        那些在深夜里怀疑自己、否定自己，第二天却依然要笑着去上班的瞬间。<br>
+        其实我都知道，或者说，我都懂。<br>
+        因为那就是成长的代价，是每一个认真生活的人都必须走过的路。
+      </p>
+
+      <p>
+        但你看，你都好好地走到了这里。<br>
+        那些你以为熬不过去的坎，都成了今天的勋章；<br>
+        那些你以为忘不掉的人，也都成了沿途的风景。<br>
+        你已经比想象中要勇敢得多、强大得多。<br>
+        所以今天，在这个只属于你的日子里，我想放下所有的客套，郑重地对你说一声：<br>
+        <strong>辛苦了，也真的很了不起。</strong>
+      </p>
+
+      <p>
+        新的一岁，关于生活，我想对你说：<br>
+        愿你既能应对柴米油盐的琐碎，也能保有诗和远方的浪漫。<br>
+        愿你在披星戴月地努力拼搏时，也别忘了偶尔停下来，闲看云卷云舒。<br>
+        工作再忙，也请留一点时间给自己，抬头看看天边的云彩；<br>
+        生活再累，也请给自己一点仪式感，买一束花，喝一杯好咖啡，或者只是发个呆。<br>
+        即使偶尔觉得日子很平凡，也能在这些平凡里，找到微小的、只属于你的确幸。
+      </p>
+
+      <p>
+        新的一岁，关于感情，我想对你说：<br>
+        愿你遇到的人都真诚，愿你付出的每一份真心都不被辜负。<br>
+        愿你遇到懂你奇奇怪怪的人，也愿意陪你可可爱爱；<br>
+        愿你遇到的人，都如你一般温柔纯良，能看穿你的逞强，也能给你最坚实的肩膀。<br>
+        愿你拥有爱与被爱的能力，能大大方方地去爱，也能坦坦荡荡地接受爱。<br>
+        即使暂时还没有遇到那个对的人，也愿你在独处的日子里，学会宽容自己、取悦自己，过得丰盛而安宁。
+      </p>
+
+      <p>
+        新的一岁，关于你自己，我想对你说：<br>
+        愿你拥有说走就走的底气，也有随时停下休息的权利。<br>
+        愿你在人群鼎沸时能够闪闪发光，也能在四下无人的黑夜里拥抱自己。<br>
+        愿你看到过这个世界的复杂、灰暗甚至是不公，却依然愿意相信美好与纯良。<br>
+        愿你在这个世界上，既能享受热闹，也能安于独处；<br>
+        既能为了热爱全力以赴，也能在失败后坦然释怀；<br>
+        既能为别人撑伞，也能在雨天心安理得地躲进别人的屋檐。<br>
+        更愿你，<br>
+        不必一直做那个“懂事”、“坚强”的大人，<br>
+        偶尔也可以像小时候那样，因为一块好吃的蛋糕、一句温暖的好话，就笑得像个孩子。
+      </p>
+
+      <p>
+        我常常在想，生日到底意味着什么？<br>
+        它不仅仅是又长大了一岁，<br>
+        更是提醒我们，在时间的长河里，你被这么多人爱着，被这么多人牵挂着。<br>
+        那些从天南海北发来的“生日快乐”，不仅仅是四个字，<br>
+        更是他们想告诉你：<em>“嘿，在这个世界上，有人一直记得你，有人在为你祝福。”</em>
+      </p>
+
+      <div class="poem">
+        年年有今日，岁岁有今朝。<br>
+        愿你眼里有星辰，身边有微风，心中有暖阳。<br>
+        愿岁月从不败你的温柔，也从不辜负你的努力。<br>
+        愿你在这个世界上，<br>
+        永远有枝可栖，有梦可做，有人可爱。
+      </div>
+
+      <p>
+        最后，愿所有的不安都能被温柔化解，<br>
+        愿所有的迷茫都能在某一刻豁然开朗。<br>
+        愿你的未来，一路生花，前程似锦。<br>
+        无论你走到哪里，走得多远，<br>
+        都别忘了，你值得被这个世界，好好爱着。<br>
+        你值得拥有所有的美好，<br>
+        因为你本身，就是一份最美好的礼物。
+      </p>
+
+      <p class="signature">
+        —— 生日快乐，未来可期 ——
+      </p>
+    </div>
+
+    <div class="divider-thin"></div>
+
+    <button class="btn-back" id="backBtn">返回</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ===== 1. 烟花引擎 =====
+  const canvas = document.getElementById('fireworksCanvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  let fireworksActive = false;
+  let animationFrameId = null;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  class Particle {
+    constructor(x, y, color) {
+      this.x = x;
+      this.y = y;
+      this.color = color;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 5 + 2;
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed;
+      this.gravity = 0.05;
+      this.friction = 0.96;
+      this.alpha = 1;
+      this.decay = Math.random() * 0.02 + 0.01;
+      this.size = Math.random() * 2 + 1;
+    }
+    update() {
+      this.vx *= this.friction;
+      this.vy *= this.friction;
+      this.vy += this.gravity;
+      this.x += this.vx;
+      this.y += this.vy;
+      this.alpha -= this.decay;
+    }
+    draw() {
+      ctx.globalAlpha = Math.max(0, this.alpha);
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function createFirework() {
+    if (!fireworksActive) return;
+    const x = Math.random() * canvas.width;
+    const y = Math.random() * (canvas.height * 0.6);
+    const colors = ['#ffd966', '#ffb347', '#fb7299', '#00a1d6', '#b8a0ff', '#98fb98'];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    for (let i = 0; i < 80; i++) {
+      particles.push(new Particle(x, y, color));
+    }
+  }
+
+  function animateFireworks() {
+    if (!fireworksActive) return;
+    ctx.fillStyle = 'rgba(26, 16, 37, 0.2)'; 
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (Math.random() < 0.03) createFirework();
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.update();
+      p.draw();
+      if (p.alpha <= 0) particles.splice(i, 1);
+    }
+    animationFrameId = requestAnimationFrame(animateFireworks);
+  }
+
+  function startFireworks() {
+    if (fireworksActive) return;
+    fireworksActive = true;
+    canvas.classList.add('active');
+    createFirework();
+    setTimeout(createFirework, 300);
+    setTimeout(createFirework, 600);
+    animateFireworks();
+  }
+
+  function stopFireworks() {
+    fireworksActive = false;
+    canvas.classList.remove('active');
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+    particles = [];
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // ===== 2. 雪花与星星 =====
+  const fxContainer = document.getElementById('fx-container');
+  let fxEnabled = true;
+  const snowToggleBtn = document.getElementById('snowToggle');
+
+  for (let i = 0; i < 50; i++) createSnowflake();
+  for (let i = 0; i < 20; i++) createStar();
+
+  function createSnowflake() {
+    const snowflake = document.createElement('div');
+    snowflake.classList.add('snowflake');
+    if (Math.random() > 0.5) {
+      snowflake.classList.add('circle');
+      const size = Math.random() * 3 + 2;
+      snowflake.style.width = size + 'px';
+      snowflake.style.height = size + 'px';
+    } else {
+      snowflake.classList.add('char');
+      snowflake.innerHTML = ['❅', '❆', '❄', '✻', '•'][Math.floor(Math.random() * 5)];
+      snowflake.style.fontSize = (Math.random() * 10 + 10) + 'px';
+    }
+    snowflake.style.left = Math.random() * 100 + 'vw';
+    const duration = Math.random() * 10 + 5;
+    snowflake.style.animationDuration = duration + 's';
+    snowflake.style.animationDelay = (Math.random() * -duration) + 's';
+    snowflake.style.opacity = Math.random() * 0.6 + 0.4;
+    fxContainer.appendChild(snowflake);
+  }
+
+  function createStar() {
+    const star = document.createElement('div');
+    star.classList.add('star-particle');
+    star.innerHTML = ['✨', '⭐', '🌟', '💫'][Math.floor(Math.random() * 4)];
+    star.style.left = Math.random() * 100 + 'vw';
+    star.style.bottom = '-20px';
+    star.style.fontSize = (Math.random() * 12 + 8) + 'px';
+    const duration = Math.random() * 10 + 8;
+    star.style.animationDuration = duration + 's';
+    star.style.animationDelay = (Math.random() * -duration) + 's';
+    star.style.opacity = Math.random() * 0.5 + 0.5;
+    fxContainer.appendChild(star);
+  }
+
+  snowToggleBtn.addEventListener('click', function() {
+    fxEnabled = !fxEnabled;
+    fxContainer.style.opacity = fxEnabled ? '1' : '0';
+    snowToggleBtn.textContent = fxEnabled ? '❄️' : '☀️';
+  });
+
+  // ===== 3. 音乐播放系统 =====
+  const bgMusic = document.getElementById('bgMusic');
+  const musicToggleBtn = document.getElementById('musicToggle');
+  let isPlayingMusic = false;
+  let audioCtx = null;
+  let musicTimeout = null;
+
+  function hasCustomMusic() {
+    const sources = bgMusic.getElementsByTagName('source');
+    for (let i = 0; i < sources.length; i++) {
+      if (sources[i].src && sources[i].src.trim() !== '') {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  const notes = [
+    [392.00, 0.3], [392.00, 0.2], [440.00, 0.5], [392.00, 0.5], [523.25, 0.5], [493.88, 1.0],
+    [392.00, 0.3], [392.00, 0.2], [440.00, 0.5], [392.00, 0.5], [587.33, 0.5], [523.25, 1.0],
+    [392.00, 0.3], [392.00, 0.2], [783.99, 0.5], [659.25, 0.5], [523.25, 0.5], [493.88, 0.5], [440.00, 1.0],
+    [698.46, 0.3], [698.46, 0.2], [659.25, 0.5], [523.25, 0.5], [587.33, 0.5], [523.25, 1.0]
+  ];
+
+  function initAudio() {
+    if (!audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function playNote(freq, startTime, duration) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    osc.type = 'triangle'; 
+    osc.frequency.value = freq;
+    gainNode.gain.setValueAtTime(0, startTime);
+    gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.05); 
+    gainNode.gain.setValueAtTime(0.3, startTime + duration - 0.1);
+    gainNode.gain.linearRampToValueAtTime(0, startTime + duration); 
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+  }
+
+  function playSynthMusic() {
+    initAudio(); 
+    if (!audioCtx || audioCtx.state === 'suspended') return;
+    if (musicTimeout) clearTimeout(musicTimeout);
+    let currentTime = audioCtx.currentTime + 0.1;
+    let totalDuration = 0;
+    notes.forEach(note => {
+      playNote(note[0], currentTime, note[1]);
+      currentTime += note[1];
+      totalDuration += note[1];
+    });
+    musicTimeout = setTimeout(() => {
+      if (isPlayingMusic && !hasCustomMusic()) playSynthMusic();
+    }, (totalDuration + 1.5) * 1000);
+  }
+
+  function playMusic() {
+    isPlayingMusic = true;
+    musicToggleBtn.textContent = '🔊';
+    musicToggleBtn.title = '点击静音';
+
+    if (hasCustomMusic()) {
+      bgMusic.play().catch(function(error) {
+        console.log('自定义音乐播放失败，回退到合成音:', error);
+        playSynthMusic();
+      });
+    } else {
+      playSynthMusic();
+    }
+  }
+
+  function stopMusic() {
+    isPlayingMusic = false;
+    musicToggleBtn.textContent = '🔇';
+    musicToggleBtn.title = '点击播放';
+    if (hasCustomMusic()) {
+      bgMusic.pause();
+      bgMusic.currentTime = 0;
+    }
+    if (musicTimeout) {
+      clearTimeout(musicTimeout);
+      musicTimeout = null;
+    }
+    if (audioCtx && audioCtx.state === 'running') {
+      audioCtx.suspend();
+    }
+  }
+
+  musicToggleBtn.addEventListener('click', function() {
+    if (isPlayingMusic) stopMusic();
+    else playMusic();
+  });
+
+  // ===== 4. 点击爆发星星特效 =====
+  function burstStars() {
+    const card = document.querySelector('.birthday-card');
+    const rect = card.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    for (let i = 0; i < 24; i++) {
+      const star = document.createElement('div');
+      star.classList.add('burst-star');
+      star.innerHTML = ['✨', '⭐', '🌟', '💫', '🎉', '🎈'][Math.floor(Math.random() * 6)];
+      star.style.left = centerX + 'px';
+      star.style.top = centerY + 'px';
+      star.style.fontSize = (Math.random() * 16 + 12) + 'px';
+      const angle = Math.random() * Math.PI * 2;
+      const distance = Math.random() * 200 + 80;
+      star.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+      star.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+      star.style.setProperty('--tr', (Math.random() * 720 - 360) + 'deg');
+      document.body.appendChild(star);
+      setTimeout(() => { if (star.parentNode) star.remove(); }, 1500);
+    }
+  }
+
+  // ===== 5. 自动滚动 & 触发烟花 =====
+  const screen2 = document.getElementById('screen2');
+  const scrollToggleBtn = document.getElementById('scrollToggle');
+  let autoScrollInterval = null;
+  let isAutoScrolling = true;
+
+  function startAutoScroll() {
+    if (autoScrollInterval) clearInterval(autoScrollInterval);
+    autoScrollInterval = setInterval(() => {
+      if (!isAutoScrolling || !screen2.classList.contains('show')) return;
+      
+      // 为了5分钟能看完长文，这里调整了每次滚动的像素
+      screen2.scrollTop += 1.5;
+
+      // 触底判断：滚动到底部时，触发烟花
+      if (screen2.scrollTop + screen2.clientHeight >= screen2.scrollHeight - 2) {
+        isAutoScrolling = false;
+        scrollToggleBtn.textContent = '▶️';
+        clearInterval(autoScrollInterval);
+        
+        // 播放烟花
+        startFireworks();
+      }
+    }, 40);
+  }
+
+  function stopAutoScroll() {
+    if (autoScrollInterval) {
+      clearInterval(autoScrollInterval);
+      autoScrollInterval = null;
+    }
+  }
+
+  screen2.addEventListener('touchstart', function() {
+    if (isAutoScrolling) {
+      isAutoScrolling = false;
+      scrollToggleBtn.textContent = '▶️';
+    }
+  });
+
+  screen2.addEventListener('wheel', function() {
+    if (isAutoScrolling) {
+      isAutoScrolling = false;
+      scrollToggleBtn.textContent = '▶️';
+    }
+  });
+
+  scrollToggleBtn.addEventListener('click', function() {
+    if (!screen2.classList.contains('show')) return;
+
+    isAutoScrolling = !isAutoScrolling;
+    if (isAutoScrolling) {
+      scrollToggleBtn.textContent = '⏸️';
+      if (screen2.scrollTop + screen2.clientHeight >= screen2.scrollHeight - 2) {
+        screen2.scrollTop = 0;
+      }
+      startAutoScroll();
+    } else {
+      scrollToggleBtn.textContent = '▶️';
+      stopAutoScroll();
+    }
+  });
+
+  // ===== 6. 页面主交互 =====
+  const receiveBtn = document.getElementById('receiveBtn');
+  const screen1 = document.getElementById('screen1');
+  const backBtn = document.getElementById('backBtn');
+
+  receiveBtn.addEventListener('click', function() {
+    screen1.classList.add('hide');
+    screen2.classList.add('show');
+    playMusic();
+    burstStars();
+
+    scrollToggleBtn.style.display = 'flex';
+    isAutoScrolling = true;
+    scrollToggleBtn.textContent = '⏸️';
+
+    setTimeout(() => {
+      startAutoScroll();
+    }, 800);
+  });
+
+  backBtn.addEventListener('click', function() {
+    screen2.classList.remove('show');
+    screen1.classList.remove('hide');
+    screen2.scrollTop = 0;
+    stopMusic();
+    stopAutoScroll();
+    stopFireworks();
+    
+    scrollToggleBtn.style.display = 'none';
+  });
+
+})();
+</script>
+</body>
+</html>
